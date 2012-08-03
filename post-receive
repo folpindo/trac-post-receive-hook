@@ -101,7 +101,7 @@ GIT_PATH = '/usr/bin/git'
 VERBOSE = False
 REPOST_SEEN = False
 POST_COMMENT = True
-PRETTY_FORMAT = "'''%s'''  ''by %cn'' ([changeset:%H/sgip %h])\n\n%b"
+PRETTY_FORMAT = "'''%s'''  ''by %cn'' ([changeset:%H %h])\n\n%b"
 
 # Use the egg cache of the environment if not other python egg cache is given.
 if not 'PYTHON_EGG_CACHE' in os.environ:
