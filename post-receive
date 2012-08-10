@@ -200,7 +200,8 @@ def handle_ref(old, new, ref, env):
         seen_commits = []
 
     ticket_msgs = []
-    for commit in pending_commits:
+    # Iterate over commits, starting with earliest
+    for commit in reversed(pending_commits):
         # If the commit was seen already, we do not repost it.
         if commit in seen_commits and not REPOST_SEEN:
              continue
@@ -215,13 +216,13 @@ def handle_ref(old, new, ref, env):
 
         ticket_msgs.append(to_unicode(get_commit_message(commit, env)))
 
-    # Get the ticket comment author out of the last commit.
+    # Get the ticket comment author out of the latest commit.
     author = to_unicode(call_git('rev-list', ['-n', '1', commit,
         '--pretty=format:%cn']).splitlines()[1])
 
     try:
         if POST_COMMENT:
-            post_to_ticket('\n----\n'.join(reversed(ticket_msgs)),
+            post_to_ticket('\n----\n'.join(ticket_msgs),
                            author, tkt_id, env)
     except Exception, e:
         msg = 'Unexpected error processing commit %s: %s' % (commit[:7], e)
