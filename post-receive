@@ -1,4 +1,4 @@
-#!/home/django/virtualenvs/trac/bin/python
+#!/usr/bin/env python -W ignore::DeprecationWarning
 
 # trac-post-receive-hook
 # ----------------------------------------------------------------------------
