@@ -1,4 +1,4 @@
-#!/usr/bin/env python -W ignore::DeprecationWarning
+#!/usr/bin/python -W ignore::DeprecationWarning
 
 # trac-post-receive-hook
 # ----------------------------------------------------------------------------
@@ -88,6 +88,7 @@
 # Set POST_COMMENT to True.
 # Set VERBOSE to False.
 
+from collections import defaultdict
 import sys
 import os
 import re
@@ -102,6 +103,7 @@ VERBOSE = False
 REPOST_SEEN = False
 POST_COMMENT = True
 PRETTY_FORMAT = "'''%s'''  ''by %cn'' ([changeset:%H %h])\n\n%b"
+DEFAULT_TKT_ID = 511
 
 # Use the egg cache of the environment if not other python egg cache is given.
 if not 'PYTHON_EGG_CACHE' in os.environ:
@@ -110,6 +112,9 @@ if not 'PYTHON_EGG_CACHE' in os.environ:
 # Regex for finding ticket number in refname.
 ticket_from_ref = r'/([0-9]+)[a-zA-Z0-9_]+$'
 ticket_from_ref_re = re.compile(ticket_from_ref)
+
+ticket_from_msg = r'Merge branch \'([0-9]+)'
+ticket_from_msg_re = re.compile(ticket_from_msg)
 
 def call_git(command, args):
     """Return result of calling git with args."""
@@ -165,13 +170,13 @@ def handle_ref(old, new, ref, env):
         print ref
     # Regex the ticket number out of the refname
     match = ticket_from_ref_re.search(ref)
-    if not match:
-        # If there is no ticket number in the refname, do nothing.
-        # TODO: Detect merges into develop
-        return
-    tkt_id = int(match.group(1))
-    if VERBOSE:
-        print "Parsed ticket from refname: %s" % tkt_id
+
+    tkt_id_from_ref = DEFAULT_TKT_ID
+    if match:
+        tkt_id_from_ref = int(match.group(1))
+
+        if VERBOSE:
+            print "Parsed ticket from refname: %s" % tkt_id_from_ref
     # Get the list of hashs for commits in the changeset.
     args = (old == '0' * 40) and [new] or [new, '^' + old]
 
@@ -199,37 +204,51 @@ def handle_ref(old, new, ref, env):
         cursor.execute('CREATE TABLE git_seen (sha1 VARCHAR(40));')
         seen_commits = []
 
-    ticket_msgs = []
+    ticket_msgs = defaultdict(list)
     # Iterate over commits, starting with earliest
     for commit in reversed(pending_commits):
         # If the commit was seen already, we do not repost it.
         if commit in seen_commits and not REPOST_SEEN:
-             continue
+           continue
+        
+        remember_commit(commit, db, cursor)
 
-        # Remember commit, so each commit is only processed once.
-        try:
-             cursor.execute('INSERT INTO git_seen (sha1) VALUES (%s)', [commit])
-        except db.IntegrityError:
-             # If an integrity error occurs (perhaps because another process
-             # has triggered the script in the meantime), skip the insert.
-             continue
+        # Get message from commit
+        msg = get_commit_message(commit, env)
 
-        ticket_msgs.append(to_unicode(get_commit_message(commit, env)))
+        # If a merge commit, try to identify origin ticket.
+        match = ticket_from_msg_re.search(msg)
+        if match:
+            tkt_id = int(match.group(1))
+            ticket_msgs[tkt_id].append(to_unicode(msg))
+        else:
+        # Otherwise, we comment on the ticket corresponding to the ref
+            ticket_msgs[tkt_id_from_ref].append(to_unicode(msg))
 
-    # Get the ticket comment author out of the latest commit.
-    author = to_unicode(call_git('rev-list', ['-n', '1', commit,
-        '--pretty=format:%cn']).splitlines()[1])
+    # the wire (hook) hears all
+    author = "the wire"
 
     try:
         if POST_COMMENT:
-            post_to_ticket('\n----\n'.join(ticket_msgs),
-                           author, tkt_id, env)
+            for tkt_id, commit_msgs in ticket_msgs.items():
+                post_to_ticket('\n----\n'.join(commit_msgs),
+                               author, tkt_id, env)
     except Exception, e:
         msg = 'Unexpected error processing commit %s: %s' % (commit[:7], e)
         print >>sys.stderr, msg
         db.rollback()
     else:
         db.commit()
+
+def remember_commit(commit, db, cursor):
+    # Remember commit, so each commit is only processed once.
+    try:
+         cursor.execute('INSERT INTO git_seen (sha1) VALUES (%s)', [commit])
+    except db.IntegrityError:
+         # If an integrity error occurs (perhaps because another process
+         # has triggered the script in the meantime), skip the insert.
+         pass
+
 
 if __name__ == '__main__':
     from trac.env import open_environment
