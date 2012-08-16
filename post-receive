@@ -110,7 +110,7 @@ if not 'PYTHON_EGG_CACHE' in os.environ:
     os.environ['PYTHON_EGG_CACHE'] = '/tmp/.egg-cache'
 
 # Regex for finding ticket number in refname.
-ticket_from_ref = r'/([0-9]+)[a-zA-Z0-9_]+$'
+ticket_from_ref = r'/^([0-9]+)'
 ticket_from_ref_re = re.compile(ticket_from_ref)
 
 ticket_from_msg = r'Merge branch \'([0-9]+)'
@@ -231,6 +231,7 @@ def handle_ref(old, new, ref, env):
     try:
         if POST_COMMENT:
             for tkt_id, commit_msgs in ticket_msgs.items():
+                print "Posting to ticket #%s" % tkt_id
                 post_to_ticket('\n----\n'.join(commit_msgs),
                                author, tkt_id, env)
     except Exception, e:
