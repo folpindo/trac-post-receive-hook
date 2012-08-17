@@ -97,13 +97,8 @@ from datetime import datetime
 from operator import itemgetter
 import psycopg2
 
-TRAC_ENV = '/home/django/virtualenvs/trac/repos/deployed/develop'
-GIT_PATH = '/usr/bin/git'
-VERBOSE = False
-REPOST_SEEN = False
-POST_COMMENT = True
-PRETTY_FORMAT = "'''%s'''  ''by %cn'' ([changeset:%H %h])\n\n%b"
-DEFAULT_TKT_ID = 511
+# Import project-specific configuration variables
+from hook_config import *
 
 # Use the egg cache of the environment if not other python egg cache is given.
 if not 'PYTHON_EGG_CACHE' in os.environ:
@@ -171,7 +166,7 @@ def handle_ref(old, new, ref, env):
     # Regex the ticket number out of the refname
     match = ticket_from_ref_re.search(ref)
 
-    tkt_id_from_ref = DEFAULT_TKT_ID
+    tkt_id_from_ref = DEFAULT_POST_RECEIVE_TKT_ID
     if match:
         tkt_id_from_ref = int(match.group(1))
 
