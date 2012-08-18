@@ -105,7 +105,7 @@ if not 'PYTHON_EGG_CACHE' in os.environ:
     os.environ['PYTHON_EGG_CACHE'] = '/tmp/.egg-cache'
 
 # Regex for finding ticket number in refname.
-ticket_from_ref = r'/^([0-9]+)'
+ticket_from_ref = r'^refs/heads/([0-9]+)'
 ticket_from_ref_re = re.compile(ticket_from_ref)
 
 ticket_from_msg = r'Merge branch \'([0-9]+)'
