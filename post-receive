@@ -36,18 +36,27 @@
 # for example, `5150_myfeature`. Devs are encouraged to journal 
 # their work as commits and push to the server frequently.
 #
-# This post-receive hook will take all new commits to a feature branch,
+# This post-receive hook will take all new commits to a ticket branch,
 # pretty-format and combine messages, and post them to the ticket. 
 # The script will make one comment per ticket per push. There is 
 # nothing to stop one from pushing more than one branch, thus triggering 
-# comments to multiple tickets. 
+# comments to multiple tickets.
+#
+# Merge commits will be posted to the ticket that corresponds to the
+# branch being merged in (source). The assumption is the target branch is
+# a `master` or `develop` branch, which has no corresponding ticket.
+#
+# TODO: A future improvement is to handle the case where the merge target is
+# is the ticket branch. It should also be possible to handle the case of
+# merging two feature branches and post to both tickets.
 #
 # A multiline commit message will display nicely, thus giving more
 # value to thoughtful implementation notes in commit messages.
 #
-# Commits to branches that do not match the pattern are ignored,
-# including `master` and `develop`. A planned enhancement is to 
-# handle merge commits from ticket branches into `develop`.
+# Commits to branches that do not match the pattern are posted to a
+# default ticket which is configurable. The repo administrator
+# can subscribe to this ticket to watch for unexpected behaviour
+# on the part of the hook or users.
 #
 # INSTALLATION: 
 # Place this file in the host's .git/hooks/ directory of the 
