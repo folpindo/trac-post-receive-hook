@@ -117,7 +117,8 @@ if not 'PYTHON_EGG_CACHE' in os.environ:
 ticket_from_ref = r'^refs/heads/([0-9]+)'
 ticket_from_ref_re = re.compile(ticket_from_ref)
 
-ticket_from_msg = r'Merge branch \'([0-9]+)'
+# This regex will optionally capture the merge target if a ticket branch
+ticket_from_msg = r'Merge branch \'([0-9]+)(?:\w*\' into ([0-9]+))?'
 ticket_from_msg_re = re.compile(ticket_from_msg)
 
 def call_git(command, args):
@@ -223,8 +224,11 @@ def handle_ref(old, new, ref, env):
         # If a merge commit, try to identify origin ticket.
         match = ticket_from_msg_re.search(msg)
         if match:
-            tkt_id = int(match.group(1))
-            ticket_msgs[tkt_id].append(to_unicode(msg))
+            source_tkt_id = int(match.group(1))
+            target_tkt_id = int(match.group(2))
+            ticket_msgs[source_tkt_id].append(to_unicode(msg))
+            if target_tkt_id:
+                ticket_msgs[target_tkt_id].append(to_unicode(msg))
         else:
         # Otherwise, we comment on the ticket corresponding to the ref
             ticket_msgs[tkt_id_from_ref].append(to_unicode(msg))
