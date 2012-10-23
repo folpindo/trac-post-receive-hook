@@ -106,9 +106,6 @@ from datetime import datetime
 from operator import itemgetter
 import psycopg2
 
-# Import project-specific configuration variables
-from hook_config import *
-
 # Use the egg cache of the environment if not other python egg cache is given.
 if not 'PYTHON_EGG_CACHE' in os.environ:
     os.environ['PYTHON_EGG_CACHE'] = '/tmp/.egg-cache'
@@ -260,6 +257,10 @@ def remember_commit(commit, db, cursor):
 
 
 if __name__ == '__main__':
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    # Import project-specific configuration variables
+    from hook_config import *
+
     from trac.env import open_environment
     env = open_environment(TRAC_ENV)
 
