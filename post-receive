@@ -33,18 +33,23 @@
 # With essentially no cost in time or space to create branches,
 # one or more branches can be created for a given dev ticket.
 # By convention, these branches are prefixed with the ticket number,
-# for example, `5150_myfeature`. Devs are encouraged to journal 
+# for example, `5150_myfeature`. Devs are encouraged to journal
 # their work as commits and push to the server frequently.
 #
 # This post-receive hook will take all new commits to a ticket branch,
-# pretty-format and combine messages, and post them to the ticket. 
-# The script will make one comment per ticket per push. There is 
-# nothing to stop one from pushing more than one branch, thus triggering 
+# pretty-format and combine messages, and post them to the ticket.
+# The script will make one comment per ticket per push. There is
+# nothing to stop one from pushing more than one branch, thus triggering
 # comments to multiple tickets.
 #
 # Merge commits will be posted to the ticket that corresponds to the
 # branch being merged in (source). The assumption is the target branch is
 # a `master` or `develop` branch, which has no corresponding ticket.
+#
+# It is also allowed to insert a "Refs #999"-style token in the message.
+# This is encouraged for the case where it is desired to post a message
+# to a ticket other than the one corresponding to the ticket branch that it is
+# being committed to.
 #
 # TODO: A future improvement is to handle the case where the merge target is
 # is the ticket branch. It should also be possible to handle the case of
@@ -58,12 +63,12 @@
 # can subscribe to this ticket to watch for unexpected behaviour
 # on the part of the hook or users.
 #
-# INSTALLATION: 
-# Place this file in the host's .git/hooks/ directory of the 
+# INSTALLATION:
+# Place this file in the host's .git/hooks/ directory of the
 # git repository. It must be named `post-receive`.
 # Make the file executable: `chmod +x post-receive`.
 # Set the shebang in the first line to the desired python executable.
-# 
+#
 # SETTINGS:
 # TRAC_ENV - point at trac environment created with `trac-admin myenv initenv`
 # GIT_PATH - point at git executable
@@ -76,7 +81,7 @@
 #
 # Set up for testing:
 # Set REPOST_SEEN to True, POST_COMMENT to False, VERBOSE to True.
-# Create a branch, beginning with a ticket number, which can be 
+# Create a branch, beginning with a ticket number, which can be
 # deleted later. Make some empty commits with `git commit --allow-empty`.
 # Use `git log` to get the 40-byte SHA1 of the oldest and newest
 # commits made.
@@ -91,7 +96,7 @@
 # Create a ticket and make a new branch prefixed with that ticket number.
 # Make more empty commits, get the SHA1, and trigger the script again.
 # Verify the ticket has a comment.
-# 
+#
 # DEPLOYMENT:
 # Set REPOST_SEEN to False.
 # Set POST_COMMENT to True.
@@ -117,6 +122,8 @@ ticket_from_ref_re = re.compile(ticket_from_ref)
 # This regex will optionally capture the merge target if a ticket branch
 ticket_from_msg = r'Merge branch \'([0-9]+)(?:\w*\' into ([0-9]+))?'
 ticket_from_msg_re = re.compile(ticket_from_msg)
+
+ticket_from_explicit_refs_re = re.compile(r'Refs #([0-9]+)')
 
 def call_git(command, args):
     """Return result of calling git with args."""
@@ -212,11 +219,16 @@ def handle_ref(old, new, ref, env):
         # If the commit was seen already, we do not repost it.
         if commit in seen_commits and not REPOST_SEEN:
            continue
-        
+
         remember_commit(commit, db, cursor)
 
         # Get message from commit
         msg = get_commit_message(commit, env)
+
+        # First check for explicit "Refs #999"-style ticket refs.
+        matches = ticket_from_explicit_refs_re.findall(msg)
+        for ticket_id in matches:
+            ticket_msgs[ticket_id].append(to_unicode(msg))
 
         # If a merge commit, try to identify origin ticket.
         match = ticket_from_msg_re.search(msg)
