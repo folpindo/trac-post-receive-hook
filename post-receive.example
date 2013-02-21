@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# This pattern allows multiple hook scripts to be run. For every new hook
+# script, add a line in the while loop to pipe the arguments to the
+# script invocation.
+
+while read oldrev newrev refname; do
+    echo $oldrev $newrev $refname | /usr/bin/python /home/git/repositories/myrepo.git/hooks/post-receive-trac.py
+done
